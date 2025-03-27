@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <title>MarketWizards || Stock CSV Extractor</title>
+  <style>
+    html,
+    body {
+      font-family: "Geist", sans-serif;
+      user-select: none;
+    }
+  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+  <!-- Nav Bar -->
+  <div class="header-box">
+    <a href="./" class="logoLink">
+      <div class="logo">MarketWizards</div>
+    </a>
+
+    <!-- Hamburger menu for mobile -->
+    <input type="checkbox" id="menu-toggle" class="menu-toggle">
+    <label for="menu-toggle" class="hamburger">
+      <span></span>
+      <span></span>
+      <span></span>
+    </label>
+
+    <div class="menu">
+      <div class="row">
+        <a href="./ema_calculator.html">Manual Next Ema</a>
+        <a href="./" class="active">Next Ema for Stored Stocks</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mx-auto px-4 py-4 max-w-3xl min-w-full">
+    <h1 class="text-2xl font-bold text-center text-sky-500 bg-white rounded py-2 px-4 shadow-md select-none mb-[1px]">
+      Top Gainer & Looser Stock Data Viewer
+    </h1>
+
+    <!-- CSV Upload Section -->
+    <div class="bg-white rounded shadow-md p-6 mb-1">
+      <h2 class="text-md text-slate-600 font-semibold text-gray-800">Upload CSV File</h2>
+      <p class="text-[12px] text-gray-400 mb-6 border-b pb-2">
+        CSV should contain columns: Stock Symbol, LTP, Percentage %chng
+      </p>
+      <div class="flex flex-grow gap-4">
+        <div class="relative flex-col sm:flex sm:flex-row flex-grow items-center  sm:gap-4 rounded bg-white">
+          <div>
+            <input type="file" id="csvFileInput" accept=".csv"
+              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+            <button type="button"
+              class="w-full sm:w-auto bg-slate-500/5 text-sky-600 text-sm font-medium py-2 px-4 rounded transition duration-200 z-0 pointer-events-none">
+              Choose File
+            </button>
+          </div>
+          <div class="pt-4 sm:pt-0">
+            <span id="fileNameDisplay" class="text-sm text-slate-500 truncate flex-grow overflow-x-hidden">
+              No file chosen
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="bg-white rounded shadow-md p-4 mb-1 overflow-hidden">
+      <!-- Accordion Header -->
+      <div class="flex justify-between items-center cursor-pointer group" onclick="toggleFilters()">
+        <h2 class="font-semibold text-gray-800 group-hover:text-sky-600 transition-colors duration-200">
+          Set Last Traded Price Filters
+        </h2>
+        <svg id="filterArrow" class="w-5 h-5 text-gray-500 transform transition-transform duration-300" fill="none"
+          viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+
+      <!-- Collapsible Content - Initially hidden -->
+      <div id="filterContent" class="h-0 overflow-hidden transition-all duration-300 ease-in-out">
+        <div class="pt-4">
+          <div class="flex flex-col sm:flex-row sm:justify-between gap-4">
+            <!-- Input fields container -->
+            <div class="flex flex-col sm:flex-row gap-2 sm:w-1/2">
+              <input type="number" id="minLtp" placeholder="Min ltp"
+                class="flex-1 px-2 py-1 border-2 border-gray-300 rounded focus:outline-none focus:border-2 focus:border-sky-500 placeholder:text-sm">
+              <input type="number" id="maxLtp" placeholder="Max ltp"
+                class="flex-1 px-2 py-1 border-2 border-gray-300 rounded focus:outline-none focus:border-2 focus:border-sky-500 placeholder:text-sm">
+            </div>
+
+            <!-- Buttons container -->
+            <div class="flex gap-2 sm:w-auto">
+              <button id="applyFiltersBtn" disabled
+                class="flex-1 sm:flex-none bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium py-2 px-4 rounded transition duration-200">
+                Apply Filter
+              </button>
+              <button id="resetFiltersBtn"
+                class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium py-2 px-4 rounded transition duration-200">
+                Reset Filter
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Table Section -->
+    <div class="bg-white rounded shadow-md overflow-hidden" id="tableSection">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50 text-slate-600">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-center">
+                Stock Symbol
+              </th>
+              <th scope="col" class="px-6 py-3 text-xs font-medium uppercase tracking-wider text-center">
+                LTP
+              </th>
+              <th scope="col"
+                class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center cursor-pointer"
+                onclick="sortTable(2)">
+                % change <span id="sortIcon2" class="ml-1"></span>
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200" id="tableBody">
+            <tr>
+              <td colspan="3" id="msgRow" class="px-6 py-4 text-sm text-gray-400 text-center">
+                No data available
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-6 py-3 bg-gray-100 text-right text-sm text-gray-500">
+        Showing <span id="rowCount">0</span> of <span id="totalRows">0</span> rows
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast"
+      class="fixed top-2 right-32 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-lg shadow-lg transform translate-y-16 transition-transform duration-300 hidden">
+      <div class="flex items-center">
+        <i class="fas fa-check-circle mr-2"></i>
+        <span class="text-sm">Copied to clipboard!</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global variables
+    let stockData = [];
+    let filteredData = [];
+    let sortDirection = 1;
+    const maxRows = 20;
+
+    // DOM elements
+    const csvFileInput = document.getElementById('csvFileInput');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const filtersSection = document.getElementById('filtersSection');
+    const tableSection = document.getElementById('tableSection');
+    const tableBody = document.getElementById('tableBody');
+    const minLtp = document.getElementById('minLtp');
+    const maxLtp = document.getElementById('maxLtp');
+    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+    const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+    const toast = document.getElementById('toast');
+    const msgRow = document.getElementById('msgRow');
+    const rowCount = document.getElementById('rowCount');
+    const totalRows = document.getElementById('totalRows');
+
+    // Event listeners
+    csvFileInput.addEventListener('change', handleFileSelect);
+    applyFiltersBtn.addEventListener('click', applyFilters);
+    resetFiltersBtn.addEventListener('click', resetFilters);
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) {
+        resetFileDisplay();
+        return;
+      }
+
+      if (!file.name.endsWith('.csv')) {
+        showFileError('Please select a CSV file');
+        return;
+      }
+
+      fileNameDisplay.textContent = file.name;
+      fileNameDisplay.className = 'text-sm text-slate-600 font-medium truncate flex-grow';
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          parseCSV(e.target.result);
+          applyFiltersBtn.disabled = false;
+          msgRow.style.display = 'none';
+
+        } catch (error) {
+          showFileError('Error parsing CSV file');
+          console.error('CSV parsing error:', error);
+        }
+      };
+      reader.onerror = function () {
+        showFileError('Error reading file');
+      };
+      reader.readAsText(file);
+    }
+
+    function showFileError(message) {
+      fileNameDisplay.textContent = message;
+      fileNameDisplay.className = 'text-sm text-red-500 truncate flex-grow';
+      csvFileInput.value = '';
+      filtersSection.style.display = 'none';
+      tableSection.style.display = 'none';
+      msgRow.style.display = '';
+    }
+
+    function resetFileDisplay() {
+      fileNameDisplay.textContent = 'No file chosen';
+      fileNameDisplay.className = 'text-sm text-slate-500 truncate flex-grow';
+      filtersSection.style.display = 'none';
+      tableSection.style.display = 'none';
+      msgRow.style.display = '';
+    }
+
+    function parseCSV(content) {
+      const lines = content.split('\n');
+      stockData = [];
+      const startLine = lines[0].includes('Symbol') || lines[0].includes('LTP') || lines[0].includes('%chng') ? 1 : 0;
+
+      for (let i = startLine; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line) {
+          const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+          let symbol = values[0].replace(/"/g, '').trim();
+          let ltp = parseFloat(values[5]) || 0;
+          let chng = values[6] ? parseFloat(values[6].replace('%', '')) : 0;
+          stockData.push({ symbol, ltp, chng });
+        }
+      }
+
+      if (stockData.length === 0) {
+        throw new Error('No valid data found in CSV');
+      }
+
+      filteredData = [...stockData];
+      renderTable();
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const min = parseFloat(minLtp.value) || 250;
+      const max = parseFloat(maxLtp.value) || 2500;
+
+      filteredData = stockData.filter(item => item.ltp >= min && item.ltp <= max);
+      document.getElementById('sortIcon2').innerHTML = '';
+      renderTable();
+    }
+
+    function resetFilters() {
+      minLtp.value = '';
+      maxLtp.value = '';
+      filteredData = [...stockData];
+      document.getElementById('sortIcon2').innerHTML = '';
+      renderTable();
+    }
+
+    function sortTable(columnIndex) {
+      sortDirection *= -1;
+      const sortIcon = document.getElementById(`sortIcon${columnIndex}`);
+      sortIcon.innerHTML = sortDirection === 1 ? '↑' : '↓';
+
+      filteredData.sort((a, b) => {
+        if (columnIndex === 0) {
+          return a.symbol.toLowerCase().localeCompare(b.symbol.toLowerCase()) * sortDirection;
+        } else if (columnIndex === 2) {
+          return (a.chng - b.chng) * sortDirection;
+        }
+        return 0;
+      });
+
+      renderTable();
+    }
+
+    function renderTable() {
+      tableBody.innerHTML = '';
+      const displayData = filteredData.slice(0, maxRows);
+
+      displayData.forEach(item => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50/80';
+
+        const symbolCell = document.createElement('td');
+        symbolCell.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium text-sky-600 cursor-pointer text-center';
+        symbolCell.innerHTML = `<span onclick="copyToClipboard('${item.symbol}')">${item.symbol}</span>`;
+
+        const ltpCell = document.createElement('td');
+        ltpCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center';
+        ltpCell.textContent = item.ltp.toFixed(2);
+
+        const chngCell = document.createElement('td');
+        chngCell.className = `px-6 py-4 whitespace-nowrap text-sm font-medium ${item.chng >= 0 ? 'text-green-600' : 'text-red-600'} text-center`;
+        chngCell.textContent = `${item.chng >= 0 ? '+' : ''}${item.chng.toFixed(2)}%`;
+
+        row.append(symbolCell, ltpCell, chngCell);
+        tableBody.appendChild(row);
+      });
+
+      rowCount.textContent = Math.min(displayData.length, maxRows);
+      totalRows.textContent = filteredData.length;
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast();
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+    }
+
+    function showToast() {
+      toast.classList.remove('hidden', 'translate-y-16');
+      toast.classList.add('translate-y-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-16');
+        setTimeout(() => toast.classList.add('hidden'), 300);
+      }, 2000);
+    }
+    let filtersExpanded = false;
+
+    function toggleFilters() {
+      const content = document.getElementById('filterContent');
+      const arrow = document.getElementById('filterArrow');
+
+      if (filtersExpanded) {
+        // Collapse
+        content.style.height = '0';
+        arrow.classList.remove('rotate-180');
+      } else {
+        // Expand - calculate content height
+        content.style.height = content.scrollHeight + 'px';
+        arrow.classList.add('rotate-180');
+      }
+
+      filtersExpanded = !filtersExpanded;
+    }
+
+    // Initialize to collapsed state
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('filterContent').style.height = '0';
+    });
+  </script>
+</body>
+
+</html>

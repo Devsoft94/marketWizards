@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+    <title>EMA Calculator</title>
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        .toast.error {
+            background-color: #f44336;
+        }
+
+        .toast-close {
+            margin-left: 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Nav Bar -->
+    <div class="header-box">
+        <a href="./" class="logoLink">
+            <div class="logo">MarketWizards</div>
+        </a>
+        <!-- Hamburger menu for mobile -->
+        <input type="checkbox" id="menu-toggle" class="menu-toggle">
+        <label for="menu-toggle" class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </label>
+
+        <div class="menu">
+            <div class="row">
+                <a href="./ema_calculator.html">Manual Next Ema</a>
+                <a href="./gnlExtractor.html">Top Gainer & Looser Extractor</a>
+            </div>
+            <div class="row">
+                <a href="./store-stocks.html">Add EMA Values</a>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="calculator">
+        <h1>EMA Calculator</h1>
+
+        <div class="input-group">
+            <label for="stockSelect">Select a stock:</label>
+            <select id="stockSelect" onchange="loadStockData()">
+                <option value=""> Select a stock</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="currentPrice">Current Price:</label>
+            <input type="number" id="currentPrice" step="0.0001" placeholder="Enter current price"
+                onkeydown="handleEnterKey(event, 'period')">
+        </div>
+
+        <div class="input-group">
+            <label for="period">EMA Period:</label>
+            <select id="period" onkeydown="handleEnterKey(event, 'calculateBtn')">
+                <option value="2" selected>2</option>
+                <option value="5">5</option>
+                <option value="9">9</option>
+                <option value="15">15</option>
+            </select>
+        </div>
+
+        <button id="calculateBtn" onclick="calculateEMA()">Calculate Next EMA</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Store selected stock's EMA internally
+        let selectedStockEMA = null;
+
+        // Load saved stocks when page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            loadSavedStocks();
+        });
+
+        // Load stocks from localStorage
+        function loadSavedStocks() {
+            const stockSelect = document.getElementById('stockSelect');
+            const stocks = JSON.parse(localStorage.getItem('stockEMAs')) || {};
+
+            // Clear existing options except the first one
+            while (stockSelect.options.length > 1) {
+                stockSelect.remove(1);
+            }
+
+            // Add saved stocks to dropdown
+            for (const [symbol, ema] of Object.entries(stocks)) {
+                const option = document.createElement('option');
+                option.value = symbol;
+                option.textContent = `${symbol} (${parseFloat(ema).toFixed(2)})`;
+                stockSelect.appendChild(option);
+            }
+        }
+
+        // Load EMA value when stock is selected
+        function loadStockData() {
+            const stockSelect = document.getElementById('stockSelect');
+            const stocks = JSON.parse(localStorage.getItem('stockEMAs')) || {};
+
+            if (stockSelect.value && stocks[stockSelect.value]) {
+                selectedStockEMA = parseFloat(stocks[stockSelect.value]);
+                document.getElementById('currentPrice').focus();
+            } else {
+                selectedStockEMA = null;
+            }
+        }
+
+        // Calculate EMA
+        function calculateEMA() {
+            const stockSelect = document.getElementById('stockSelect');
+            const currentPrice = parseFloat(document.getElementById('currentPrice').value);
+            const period = parseInt(document.getElementById('period').value);
+            console.log(selectedStockEMA, currentPrice, period);
+
+            // Validate inputs
+            if (!stockSelect.value) {
+                showToast("Please select a stock first", "error");
+                stockSelect.focus();
+                return;
+            }
+            if (isNaN(currentPrice)) {
+                showToast("Please enter a valid current price", "error");
+                document.getElementById('currentPrice').focus();
+                return;
+            }
+            if (selectedStockEMA === null) {
+                showToast("No EMA value found for selected stock", "error");
+                return;
+            }
+
+            // Calculate smoothing factor and next EMA
+            const k = 2 / (period + 1);
+            const nextEma = (currentPrice * k) + (selectedStockEMA * (1 - k));
+            const percentDiff = ((currentPrice - nextEma) / nextEma * 100).toFixed(2);
+
+            // console.log(nextEma, percentDiff);
+
+            // Display result
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <h3 style="text-align: center; font-font-size: 18px; padding-bottom: 12px; border-bottom: 1px solid #1994ce">Calculation Result</h3>
+                <p style="font-weight:600"><span style="color: #1994ce;"> Stock:</span> <strong>${stockSelect.value}</strong></p>
+                <p style="font-weight:600"><span style="color: #1994ce;">Next ${period}-period EMA:</span>  <strong>${nextEma.toFixed(2)}</strong></p>
+                <p style="font-weight:600"><span style="color: #1994ce;">Price Difference:</span>  <strong>${percentDiff}%</strong></p>
+            `;
+            document.getElementById('period').blur();
+        }
+
+        // Handle Enter key navigation
+        function handleEnterKey(event, nextFieldId) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (nextFieldId === 'calculateBtn') {
+                    document.getElementById('calculateBtn').click();
+                } else {
+                    document.getElementById(nextFieldId).focus();
+                }
+            }
+        }
+
+        // Show toast notification
+        function showToast(message, type = '') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+    </script>
+</body>
+
+</html>

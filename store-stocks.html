@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <title>MarketWizards || Add EMA Values</title>
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    /* Toast notification styles */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1000;
+      transform: translateX(150%);
+      transition: transform 0.3s ease;
+    }
+
+    .toast.show {
+      transform: translateX(0);
+    }
+
+    .toast.error {
+      background-color: #f44336;
+    }
+
+    .toast.warning {
+      background-color: #ff9800;
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 16px;
+      margin-left: 15px;
+      cursor: pointer;
+    }
+
+    /* Stock list styles */
+    .stock-list {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .stock-list h3 {
+      text-align: center;
+      font-size: 18px;
+      color: #010d13;
+      padding: 10px;
+      margin: 0;
+      background-color: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .stock-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .stock-item:last-child {
+      border-bottom: none;
+    }
+
+    .stock-symbol {
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 14px;
+    }
+
+    .stock-ema {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .no-stocks {
+      padding: 15px;
+      text-align: center;
+      color: #999;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Toast Notification Container -->
+  <div id="toastContainer"></div>
+
+  <div class="header-box">
+    <a href="./" class="logoLink">
+      <div class="logo">MarketWizards</div>
+    </a>
+
+    <div class="menu">
+      <a href="./index.html">Go To Home</a>
+    </div>
+  </div>
+  <div class="calculator">
+    <h1>Add stocks and its EMA</h1>
+
+    <div class="input-group">
+      <label for="symbol">Stock Symbol</label>
+      <input type="text" id="symbol" placeholder="Enter Stock" onkeydown="handleEnterKey(event, 'emaValue')"
+        onclick="this.select()">
+    </div>
+
+    <div class="input-group">
+      <label for="emaValue">Enter EMA value</label>
+      <input type="number" id="emaValue" step="0.0001" placeholder="Enter latest EMA value"
+        onkeydown="handleEnterKey(event, 'AddStock')" onclick="this.select()">
+    </div>
+
+    <button id="AddStock" onclick="addStock()">Add Stocks</button>
+    <button id="removeStock" onclick="showDeleteConfirmation()">Clear Stocks</button>
+
+    <!-- Stock List Display -->
+    <div class="stock-list">
+      <h3>Saved Stocks</h3>
+      <div id="stocksContainer">
+        <!-- Stocks will be displayed here -->
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+      <div class="modal-content">
+        <p>Are you sure you want to delete all stocks?</p>
+        <div class="modal-buttons">
+          <button onclick="removeStocks()">Confirm</button>
+          <button onclick="closeModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Toast notification function
+      function showToast(message, type = 'success', duration = 3000) {
+        const toastContainer = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+          ${message}
+          <button class="toast-close">&times;</button>
+        `;
+
+        toastContainer.appendChild(toast);
+
+        // Show toast
+        setTimeout(() => {
+          toast.classList.add('show');
+        }, 10);
+
+        // Auto-hide after duration
+        const autoHide = setTimeout(() => {
+          hideToast(toast);
+        }, duration);
+
+        // Manual close
+        toast.querySelector('.toast-close').addEventListener('click', () => {
+          clearTimeout(autoHide);
+          hideToast(toast);
+        });
+      }
+
+      function hideToast(toast) {
+        toast.classList.remove('show');
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }
+
+      // Keyboard navigation
+      function handleEnterKey(event, nextFieldId) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (nextFieldId === 'AddStock') {
+            document.getElementById('AddStock').click();
+          } else if (nextFieldId) {
+            document.getElementById(nextFieldId).focus();
+          }
+        }
+      }
+
+      // Modal functions
+      function showDeleteConfirmation() {
+        document.getElementById('deleteModal').style.display = 'block';
+      }
+
+      function closeModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+      }
+
+      // Close modal when clicking outside
+      window.onclick = function (event) {
+        const modal = document.getElementById('deleteModal');
+        if (event.target === modal) {
+          closeModal();
+        }
+      }
+
+      // Stock management functions
+      function saveStock(name, ema) {
+        const stocks = getStocks();
+        stocks[name] = ema;
+        localStorage.setItem('stockEMAs', JSON.stringify(stocks));
+        displayStocks();
+      }
+
+      function getStocks() {
+        const stocksJSON = localStorage.getItem('stockEMAs');
+        return stocksJSON ? JSON.parse(stocksJSON) : {};
+      }
+
+      function displayStocks() {
+        const stocksContainer = document.getElementById('stocksContainer');
+        const stocks = getStocks();
+
+        if (Object.keys(stocks).length === 0) {
+          stocksContainer.innerHTML = '<div class="no-stocks">No stocks added yet</div>';
+          return;
+        }
+
+        let html = '';
+        for (const [symbol, ema] of Object.entries(stocks)) {
+          html += `
+            <div class="stock-item">
+              <span class="stock-symbol">${symbol}</span>
+              <span class="stock-ema">EMA: ${parseFloat(ema).toFixed(2)}</span>
+            </div>
+          `;
+        }
+        stocksContainer.innerHTML = html;
+      }
+
+      function addStock() {
+        const symbol = document.getElementById('symbol').value.trim();
+        const emaValue = parseFloat(document.getElementById('emaValue').value);
+
+        if (!symbol || isNaN(emaValue)) {
+          showToast('Please enter both stock name and a valid EMA value', 'error');
+          return;
+        }
+
+        saveStock(symbol, emaValue);
+        document.getElementById('symbol').value = '';
+        document.getElementById('emaValue').value = '';
+        document.getElementById('symbol').focus();
+        showToast('Stock added successfully!');
+      }
+
+      function removeStocks() {
+        localStorage.removeItem('stockEMAs');
+        closeModal();
+        displayStocks();
+        showToast('All stocks have been cleared', 'warning');
+      }
+
+      // Initialize the stock list when page loads
+      displayStocks();
+    </script>
+  </div>
+</body>
+
+</html>

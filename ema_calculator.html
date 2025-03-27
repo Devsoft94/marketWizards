@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <title>MarketWizards || Manual EMA Calculator</title>
+    <style>
+        /* body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        } */
+
+        .calculator {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: oklch(0.685 0.169 237.323);
+            box-shadow: 0 0 5px oklch(0.685 0.169 237.323 / 0.5);
+        }
+
+        button {
+            background-color: oklch(0.685 0.169 237.323);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: oklch(0.635 0.169 237.323);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: oklch(0.97 0.014 254.604);
+            border-radius: 4px;
+            display: none;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .result h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: oklch(0.585 0.169 237.323);
+            padding-bottom: 10px;
+            border-bottom: 1px solid oklch(0.685 0.169 237.323 / 0.2);
+        }
+
+        .result-value {
+            font-weight: bold;
+            color: oklch(0.685 0.169 237.323);
+        }
+    </style>
+    <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
+    <!-- Nav Bar -->
+    <div class="header-box">
+        <a href="./" class="logoLink">
+            <div class="logo">MarketWizards</div>
+        </a>
+
+        <!-- Hamburger menu for mobile -->
+        <input type="checkbox" id="menu-toggle" class="menu-toggle">
+        <label for="menu-toggle" class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </label>
+
+        <div class="menu">
+            <div class="row">
+                <a href="./" class="active">Next Ema for Stored Stocks</a>
+                <a href="./gnlExtractor.html">Top Gainer & Looser Extractor</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="calculator">
+        <h1>EMA Calculator</h1>
+        <div class="form-group">
+            <label for="prevEma">Previous EMA Value:</label>
+            <input type="number" id="prevEma" step="any" placeholder="Enter previous EMA value">
+        </div>
+        <div class="form-group">
+            <label for="openPrice">Current Opening Price:</label>
+            <input type="number" id="openPrice" step="any" placeholder="Enter current opening price">
+        </div>
+        <div class="form-group">
+            <label for="period">Period (default is 2):</label>
+            <input type="number" id="period" value="2" min="1" step="1" placeholder="Enter period">
+        </div>
+        <button id="calculateBtn">Calculate EMA</button>
+
+        <div class="result" id="result">
+            <h3>Results</h3>
+            <p><strong>Next EMA Value:</strong> <span id="nextEma" class="result-value"></span></p>
+            <p><strong>Percent distance Distance from Opening Price:</strong> <span id="percentDistance"
+                    class="result-value"></span>%</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const inputs = document.querySelectorAll('input');
+            const calculateBtn = document.getElementById('calculateBtn');
+            const resultDiv = document.getElementById('result');
+
+            inputs.forEach((input, index) => {
+                input.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (index < inputs.length - 1) {
+                            inputs[index + 1].focus();
+                        } else {
+                            calculateBtn.click();
+                        }
+                    }
+                });
+            });
+
+            calculateBtn.addEventListener('click', function () {
+                const prevEma = parseFloat(document.getElementById('prevEma').value);
+                const openPrice = parseFloat(document.getElementById('openPrice').value);
+                const period = parseInt(document.getElementById('period').value) || 2;
+
+                if (isNaN(prevEma) || isNaN(openPrice)) {
+                    alert('Please enter valid numbers for Previous EMA and Opening Price');
+                    return;
+                }
+
+                const k = 2 / (period + 1);
+                const nextEma = (openPrice * k) + (prevEma * (1 - k));
+                const percentDistance = ((openPrice - nextEma) / nextEma) * 100;
+
+                document.getElementById('nextEma').textContent = nextEma.toFixed(2);
+                document.getElementById('percentDistance').textContent = percentDistance.toFixed(2);
+                resultDiv.style.display = 'block';
+            });
+
+            inputs[0].focus();
+        });
+    </script>
+</body>
+
+</html>
