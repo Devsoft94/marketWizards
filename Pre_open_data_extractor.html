@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Data Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <link rel="stylesheet" href="./menuStyle.css" />
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <!-- Nav Bar -->
+    <div class="header-box">
+        <a href="./" class="logoLink">
+            <div class="logo">MarketWizards</div>
+        </a>
+        <!-- Hamburger menu for mobile -->
+        <input type="checkbox" id="menu-toggle" class="menu-toggle">
+        <label for="menu-toggle" class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </label>
+
+        <div class="menu">
+            <div class="row">
+                <a href="./gnlExtractor.html">Top Gainer & Looser Extractor</a>
+            </div>
+            <div class="row">
+                <a href="./ema_calculator.html">Manual Next Ema</a>
+                <a href="./">Stored Next Ema</a>
+            </div>
+        </div>
+    </div>
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold text-center mb-8 text-sky-600">Pre-open Stock Data Viewer</h1>
+
+        <!-- File Upload Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Upload CSV File</h2>
+            <div class="flex items-center">
+                <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100">
+            </div>
+        </div>
+
+        <!-- Filter Accordion -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+            <input type="checkbox" class="peer hidden" id="filter-accordion" />
+            <label for="filter-accordion" class="flex justify-between items-center p-6 cursor-pointer bg-gray-50">
+                <h2 class="text-xl font-semibold">Filter Options</h2>
+                <svg xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 transform peer-checked:rotate-180 transition-transform" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </label>
+            <div class="peer-checked:block hidden bg-white p-6 border-t">
+                <div class="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-8">
+                    <div class="flex-1">
+                        <label for="minPrice" class="block text-sm font-medium text-gray-700 mb-1">Minimum Price</label>
+                        <input type="number" id="minPrice" placeholder="Min price"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex-1">
+                        <label for="maxPrice" class="block text-sm font-medium text-gray-700 mb-1">Maximum Price</label>
+                        <input type="number" id="maxPrice" placeholder="Max price"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex items-end space-x-2">
+                        <button id="applyFilter"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                            Apply Filter
+                        </button>
+                        <button id="resetFilter"
+                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
+                            Reset Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table Section -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden mb-4">
+            <div class="overflow-x-auto">
+                <table id="stockTable" class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Symbol
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Final Price
+                            </th>
+                            <th scope="col" id="changeHeader"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                % Change
+                                <span id="sortIndicator" class="ml-1">↓</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="3" class="px-6 py-4 text-center text-gray-500">
+                                Upload a CSV file to view data
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="flex justify-between items-center bg-white rounded-lg shadow-md p-4">
+            <div class="text-sm text-gray-700">
+                Showing <span id="startItem">0</span> to <span id="endItem">0</span> of <span id="totalItems">0</span>
+                entries
+            </div>
+            <div class="flex space-x-2">
+                <button id="prevPage" class="px-3 py-1 border rounded-md bg-gray-100 text-gray-700 disabled:opacity-50"
+                    disabled>
+                    Previous
+                </button>
+                <button id="nextPage" class="px-3 py-1 border rounded-md bg-gray-100 text-gray-700 disabled:opacity-50"
+                    disabled>
+                    Next
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast"
+        class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 opacity-0">
+        Symbol copied to clipboard!
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let stockData = [];
+            let filteredData = [];
+            let sortDirection = 'desc';
+            const DEFAULT_MIN_PRICE = 250;
+            const DEFAULT_MAX_PRICE = 2500;
+            const ROWS_PER_PAGE = 10;
+            let currentPage = 1;
+
+            // DOM Elements
+            const csvFileInput = document.getElementById('csvFile');
+            const tableBody = document.getElementById('tableBody');
+            const changeHeader = document.getElementById('changeHeader');
+            const sortIndicator = document.getElementById('sortIndicator');
+            const minPriceInput = document.getElementById('minPrice');
+            const maxPriceInput = document.getElementById('maxPrice');
+            const applyFilterBtn = document.getElementById('applyFilter');
+            const resetFilterBtn = document.getElementById('resetFilter');
+            const toast = document.getElementById('toast');
+            const prevPageBtn = document.getElementById('prevPage');
+            const nextPageBtn = document.getElementById('nextPage');
+            const startItemSpan = document.getElementById('startItem');
+            const endItemSpan = document.getElementById('endItem');
+            const totalItemsSpan = document.getElementById('totalItems');
+
+            // Initialize default filter values
+            function initFilterValues() {
+                minPriceInput.value = DEFAULT_MIN_PRICE;
+                maxPriceInput.value = DEFAULT_MAX_PRICE;
+            }
+
+            // Process CSV file automatically when selected
+            csvFileInput.addEventListener('change', function () {
+                if (csvFileInput.files.length === 0) return;
+
+                const file = csvFileInput.files[0];
+                Papa.parse(file, {
+                    header: false,
+                    complete: function (results) {
+                        stockData = results.data.map(row => {
+                            // Extract SYMBOL (index 0), FINAL (index 5), % CHNG (index 4)
+                            // Remove quotes from symbol if present
+                            const symbol = row[0] ? row[0].replace(/"/g, '') : '';
+                            const finalPrice = parseFloat(row[5]) || 0;
+                            const percentChange = parseFloat(row[4]) || 0;
+
+                            return {
+                                symbol,
+                                finalPrice,
+                                percentChange
+                            };
+                        }).filter(item => item.symbol); // Filter out empty rows
+
+                        // Set default filter values and apply filter
+                        initFilterValues();
+                        applyFilter();
+                    },
+                    error: function (error) {
+                        console.error('Error parsing CSV:', error);
+                        alert('Error parsing CSV file. Please check the file format.');
+                    }
+                });
+            });
+
+            // Sort by % Change - maintains current filter
+            changeHeader.addEventListener('click', function () {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                sortIndicator.textContent = sortDirection === 'asc' ? '↑' : '↓';
+                renderTable();
+            });
+
+            // Apply price filter
+            applyFilterBtn.addEventListener('click', function () {
+                currentPage = 1; // Reset to first page when filter changes
+                applyFilter();
+            });
+
+            // Reset filter to defaults
+            resetFilterBtn.addEventListener('click', function () {
+                currentPage = 1; // Reset to first page when resetting
+                initFilterValues();
+                applyFilter();
+            });
+
+            // Pagination controls
+            prevPageBtn.addEventListener('click', function () {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTable();
+                }
+            });
+
+            nextPageBtn.addEventListener('click', function () {
+                const totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderTable();
+                }
+            });
+
+            function applyFilter() {
+                const minPrice = parseFloat(minPriceInput.value) || DEFAULT_MIN_PRICE;
+                const maxPrice = parseFloat(maxPriceInput.value) || DEFAULT_MAX_PRICE;
+
+                // Filter data and store in filteredData
+                filteredData = stockData.filter(item => {
+                    return item.finalPrice >= minPrice && item.finalPrice <= maxPrice;
+                });
+
+                // Update pagination info
+                updatePaginationInfo();
+
+                // Sort and render
+                renderTable();
+            }
+
+            function renderTable() {
+                // Sort the filtered data by % change
+                const sortedData = [...filteredData].sort((a, b) => {
+                    return sortDirection === 'asc'
+                        ? a.percentChange - b.percentChange
+                        : b.percentChange - a.percentChange;
+                });
+
+                // Calculate pagination
+                const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
+                const endIdx = startIdx + ROWS_PER_PAGE;
+                const paginatedData = sortedData.slice(startIdx, endIdx);
+
+                // Clear table
+                tableBody.innerHTML = '';
+
+                if (paginatedData.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="px-6 py-4 text-center text-gray-500">
+                                No data found matching the filter criteria
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                // Populate table
+                paginatedData.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+
+                    // Determine color for % change
+                    const changeColor = item.percentChange >= 0 ? 'text-green-600' : 'text-red-600';
+                    const changeSymbol = item.percentChange >= 0 ? '+' : '';
+
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-blue-600 font-medium cursor-pointer copy-symbol" data-symbol="${item.symbol}">
+                                ${item.symbol}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ₹${item.finalPrice.toFixed(2)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap ${changeColor}">
+                            ${changeSymbol}${item.percentChange.toFixed(2)}%
+                        </td>
+                    `;
+
+                    tableBody.appendChild(row);
+                });
+
+                // Update pagination info
+                updatePaginationInfo();
+
+                // Add click event listeners to all symbol elements
+                document.querySelectorAll('.copy-symbol').forEach(el => {
+                    el.addEventListener('click', async function () {
+                        const symbol = this.getAttribute('data-symbol');
+                        try {
+                            await navigator.clipboard.writeText(symbol);
+                            showToast();
+                        } catch (err) {
+                            console.error('Failed to copy symbol: ', err);
+                            // Fallback for browsers that don't support clipboard API
+                            const textArea = document.createElement('textarea');
+                            textArea.value = symbol;
+                            document.body.appendChild(textArea);
+                            textArea.select();
+                            try {
+                                document.execCommand('copy');
+                                showToast();
+                            } catch (err) {
+                                console.error('Fallback copy failed: ', err);
+                            }
+                            document.body.removeChild(textArea);
+                        }
+                    });
+                });
+            }
+
+            function updatePaginationInfo() {
+                const totalItems = filteredData.length;
+                const totalPages = Math.ceil(totalItems / ROWS_PER_PAGE);
+                const startItem = totalItems === 0 ? 0 : ((currentPage - 1) * ROWS_PER_PAGE) + 1;
+                const endItem = Math.min(currentPage * ROWS_PER_PAGE, totalItems);
+
+                startItemSpan.textContent = startItem;
+                endItemSpan.textContent = endItem;
+                totalItemsSpan.textContent = totalItems;
+
+                // Enable/disable pagination buttons
+                prevPageBtn.disabled = currentPage <= 1;
+                nextPageBtn.disabled = currentPage >= totalPages;
+            }
+
+            function showToast() {
+                toast.classList.remove('opacity-0');
+                toast.classList.add('opacity-100');
+
+                setTimeout(() => {
+                    toast.classList.remove('opacity-100');
+                    toast.classList.add('opacity-0');
+                }, 2000);
+            }
+
+            // Initialize filter values on page load
+            initFilterValues();
+        });
+    </script>
+</body>
+
+</html>
