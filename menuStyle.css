@@ -88,12 +88,6 @@
 	}
 }
 
-
-
-
-
-
-
 /* ===== Mobile Menu Toggle ===== */
 .menu-toggle {
 	display: none;
@@ -168,16 +162,6 @@
 		text-align: center;
 		padding: 10px;
 		margin-left: 0;
-	}
-
-	input,
-	select,
-	button {
-		padding: 0.8rem;
-	}
-
-	#result {
-		font-size: 0.85rem;
 	}
 
 	/* Hamburger animation */
